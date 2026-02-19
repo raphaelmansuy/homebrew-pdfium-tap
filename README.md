@@ -1,34 +1,43 @@
 # homebrew-pdfium-tap
 
-Homebrew tap providing a community-maintained `pdfium` formula that wraps
-prebuilt binaries from `bblanchon/pdfium-binaries`.
+Homebrew tap for [raphaelmansuy/edgequake-pdf2md](https://github.com/raphaelmansuy/edgequake-pdf2md).
+
+This tap provides two formulas:
+
+| Formula | Description |
+|---------|-------------|
+| `pdf2md` | PDF to Markdown converter using Vision LLMs (self-contained binary with pdfium embedded) |
+| `pdfium` | Prebuilt pdfium native libraries from `bblanchon/pdfium-binaries` |
 
 Repository: https://github.com/raphaelmansuy/homebrew-pdfium-tap
 
-Status
-
-- Published under `raphaelmansuy/homebrew-pdfium-tap` on GitHub.
-- The `Formula/pdfium.rb` in this repo pins sha256 values for known upstream
-  assets and includes CI helpers to verify asset availability.
-
-Quick install
+## Quick install - pdf2md (recommended)
 
 ```bash
-# Tap the repository
 brew tap raphaelmansuy/homebrew-pdfium-tap
+brew install pdf2md
+```
 
-# Install the pdfium formula
+Then use it:
+
+```bash
+# Convert a PDF to Markdown (requires an LLM provider API key)
+pdf2md convert document.pdf --provider openai --output document.md
+
+# Inspect PDF metadata without calling an LLM
+pdf2md --inspect-only document.pdf
+```
+
+See `pdf2md --help` for the full list of options and supported LLM providers.
+
+## Quick install - pdfium (prebuilt native library)
+
+```bash
+brew tap raphaelmansuy/homebrew-pdfium-tap
 brew install pdfium
 ```
 
-Or install directly from the raw formula URL without tapping:
-
-```bash
-brew install https://raw.githubusercontent.com/raphaelmansuy/homebrew-pdfium-tap/main/Formula/pdfium.rb
-```
-
-After install, the native libraries are installed into the formula prefix. To
-add the library path to your environment:
+After install, add the native library to your search path:
 
 ```bash
 # macOS
@@ -38,31 +47,44 @@ export DYLD_LIBRARY_PATH="$(brew --prefix pdfium)/lib:$DYLD_LIBRARY_PATH"
 export LD_LIBRARY_PATH="$(brew --prefix pdfium)/lib:$LD_LIBRARY_PATH"
 ```
 
-Notes
+## Formula details
 
-- The formula currently pins sha256 values for the upstream assets — this
-  protects installations from upstream changes. When upstream releases are
-  updated the release helper scripts can be used to recompute and patch the
-  formula.
-- CI: this repository includes a `verify-assets.yml` workflow that checks the
-  availability and checksums of upstream assets on push or dispatch.
+### pdf2md
 
-Publishing & maintenance
+- Version: 0.4.0 (edgequake-pdf2md)
+- Pdfium version: chromium/7690
+- The binary is **fully self-contained**: pdfium is embedded at build time, no shared library needed at runtime.
+- The formula stages the correct prebuilt pdfium library via a `resource` block so `brew install` works without network access during the cargo build step.
+- Supported platforms: macOS arm64, macOS x86_64, Linux x86_64, Linux arm64
 
-If you want to update the formula for a new upstream release:
+### pdfium
 
-1. Run `release/generate-sha256.sh <asset-url>` to compute the sha256 for each asset.
-2. Use `--apply` to patch `Formula/pdfium.rb` and commit the change.
-3. Push a branch/PR and merge when checks pass.
+- Version: 7690 (chromium/7690)
+- Installs `libpdfium.dylib` (macOS) or `libpdfium.so` (Linux) into the formula prefix.
 
-Helpers
+## Updating
 
-- `release/check_assets.sh Formula/pdfium.rb` — downloads URLs referenced by the formula and prints sha256 sums.
-- `release/generate-sha256.sh <asset-url> [--apply]` — download an asset and either print the sha256 or patch `Formula/pdfium.rb` replacing the first `sha256 :no_check` entry with the computed sha256.
+### Update pdf2md to a new version
 
-Contributing
+Update `url` and `sha256` in `Formula/pdf2md.rb`:
 
-Open an issue or a PR against this repository for feature requests, bugs, or
-to update upstream asset pins.
+```bash
+curl -sL https://github.com/raphaelmansuy/edgequake-pdf2md/archive/refs/tags/vX.Y.Z.tar.gz | shasum -a 256
+```
 
-License: same as the parent project.
+Paste the hash into the formula, then commit and push.
+
+### Update pdfium to a new chromium build
+
+Use the helper scripts in `release/`:
+
+```bash
+release/check_assets.sh Formula/pdfium.rb
+release/generate-sha256.sh <asset-url> --apply
+```
+
+## Contributing
+
+Open an issue or pull request against this repository.
+
+License: MIT
